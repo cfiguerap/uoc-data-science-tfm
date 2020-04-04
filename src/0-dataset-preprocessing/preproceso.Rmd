@@ -24,11 +24,11 @@ El objectivo es preparar el fichero para su posterior an√°lisis.
 
 ***
 
-(@) __Cargamos el fichero y se hace una breve descripci√≥n del contenido.__
+(@) __Cargamos el fichero y se hace una breve descripciÛn del contenido.__
 
 
 ```{r}
-data = read.csv("data/block_0.csv", stringsAsFactors = FALSE)
+data = read.csv("block_0.csv", stringsAsFactors = FALSE)
 summary(data)
 ```
 
@@ -48,7 +48,7 @@ names(data)[names(data) == "energy.kWh.hh."] <- "consumo"
 
 ***
 
-(@) __Nos quedaremos con las lecturas de un s√≥lo identificador. El primero de ellos mismo.__
+(@) __Nos quedaremos con las lecturas de un sÛlo identificador. El primero de ellos mismo.__
 
 ```{r}
 data <- data[data$id == 'MAC000002',]
@@ -64,7 +64,7 @@ headTail(data)
 sapply(data, class)
 ```
 
-Podemos ver que los datos fecha deber√≠an ser Date y energy deber√≠an ser n√∫meros.
+Podemos ver que los datos fecha deberÌan ser Date y energy deberÌan ser n√∫meros.
 
 ```{r}
 data$fecha <- as.POSIXlt(data$fecha, format = '%Y-%m-%d %H:%M:%S.0000000')
@@ -81,7 +81,7 @@ headTail(data)
 colSums(is.na(data))
 ```
 
-Existen valores nulos, as√≠ que haremos lo siguiente:
+Existen valores nulos, asÌ que haremos lo siguiente:
 
 * Las fechas, pondremos el valor anterior sumando 30 minutos
 * Los consumos, omitiremos el valor
@@ -101,10 +101,10 @@ data <- data[!is.na(data$consumo),]  # omitir NA
 
 ## 2. Fichero de festivos
 
-(@) __Crearemos una nueva columna para marcar los d√≠as festivos con los datos de vacaciones__
+(@) __Crearemos una nueva columna para marcar los dÌas festivos con los datos de vacaciones__
 
 ```{r}
-festivos = read.csv("data/uk_bank_holidays.csv", stringsAsFactors = FALSE)
+festivos = read.csv("uk_bank_holidays.csv", stringsAsFactors = FALSE)
 headTail(festivos)
 ```
 ***
@@ -119,7 +119,7 @@ headTail(festivos)
 
 ***
 
-(@) __Creamos una nueva columna en el dataframe anterior (data) donde se indique que el d√≠a es festivo. Indicaremos (con un 1) d√≠as festivos y no laborables. Tambi√©n miraremos los d√≠as laborables__
+(@) __Creamos una nueva columna en el dataframe anterior (data) donde se indique que el dÌa es festivo. Indicaremos (con un 1) d√≠as festivos y no laborables. TambiÈn miraremos los dÌas laborables__
 
 ```{r}
 data$festivo <- 0
@@ -133,13 +133,13 @@ headTail(data)
 
 ***
 
-## 3. Fichero meteorol√≥gico
+## 3. Fichero meteorolÛgico
 
 
-(@) __Ya tenemos indicadas en las fechas los d√≠as festivos y laborables. Ahora vamos a hacer lo mismo para los datos meteorol√≥gicos__
+(@) __Ya tenemos indicadas en las fechas los dÌas festivos y laborables. Ahora vamos a hacer lo mismo para los datos meteorolÛgicos__
 
 ```{r}
-meteo = read.csv("data/weather_hourly_darksky.csv", stringsAsFactors = FALSE)
+meteo = read.csv("weather_hourly_darksky.csv", stringsAsFactors = FALSE)
 headTail(meteo)
 ```
 ***
@@ -179,7 +179,7 @@ summary(meteo)
 
 ***
 
-(@) __Los datos meteorol√≥gicos van de hora en hora y los de consumo de 30min a 30min. Duplicaremos las filas sumando 30 minutos a las nuevas.__
+(@) __Los datos meteorolÛgicos van de hora en hora y los de consumo de 30min a 30min. Duplicaremos las filas sumando 30 minutos a las nuevas.__
 
 ```{r}
 for (i in 1:nrow(meteo)) {
@@ -191,7 +191,7 @@ for (i in 1:nrow(meteo)) {
   newDate$min <- newDate$min + 30
   duplicate_row$time <- as.POSIXlt(newDate)
   
-  # aÔøΩadimos al dataset de meteo
+  # aÒadimos al dataset de meteo
   meteo <- rbind(meteo, duplicate_row)
 }
 
@@ -201,7 +201,7 @@ headTail(meteo)
 
 ***
 
-(@) __Cruzamos los datos meteorl√≥gicos con el dataset a partir de los campos de fecha__
+(@) __Cruzamos los datos meteorlÛgicos con el dataset a partir de los campos de fecha__
 
 ```{r}
 data <- merge(data, meteo, by.x="fecha", by.y="time", sort = FALSE)
@@ -213,7 +213,6 @@ headTail(data)
 (@) __Finalmente, guardamos el fichero resultante corregido.__
 
 ```{r}
-#col_order <- c("fecha", "festivo", "consumo")
-#data <- data[, col_order]
+headTail(data)
 write.csv(data, file = "dataset.csv", row.names=FALSE)
 ```

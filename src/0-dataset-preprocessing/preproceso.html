@@ -193,9 +193,9 @@ $(document).ready(function () {
 <hr />
 <div id="preproceso-de-datos" class="section level1">
 <h1>Preproceso de datos</h1>
-<p>El objectivo es preparar el fichero para su posterior análisis.</p>
+<p>El objectivo es preparar el fichero para su posterior anÃ¡lisis.</p>
 <div id="fichero-de-consumos" class="section level2">
-<h2>Fichero de consumos</h2>
+<h2>1. Fichero de consumos</h2>
 <hr />
 <ol class="example" style="list-style-type: decimal">
 <li><strong>Cargamos el fichero y se hace una breve descripción del contenido.</strong></li>
@@ -242,9 +242,9 @@ headTail(data)</code></pre>
 <pre class="r"><code>sapply(data, class)</code></pre>
 <pre><code>##       fecha     consumo 
 ## &quot;character&quot; &quot;character&quot;</code></pre>
-<p>Podemos ver que los datos fecha deberían ser Date y energy deberían ser números.</p>
+<p>Podemos ver que los datos fecha deberían ser Date y energy deberían ser nÃºmeros.</p>
 <pre class="r"><code>data$fecha &lt;- as.POSIXlt(data$fecha, format = '%Y-%m-%d %H:%M:%S.0000000')
-data$consumo &lt;- as.numeric(data$consumo)</code></pre>
+data$consumo &lt;- as.double(data$consumo)</code></pre>
 <pre><code>## Warning: NAs introducidos por coerción</code></pre>
 <pre class="r"><code>headTail(data)</code></pre>
 <pre><code>##                     fecha consumo
@@ -278,6 +278,9 @@ for (i in which(is.na(data$fecha))) {
 
 data &lt;- data[!is.na(data$consumo),]  # omitir NA</code></pre>
 <hr />
+</div>
+<div id="fichero-de-festivos" class="section level2">
+<h2>2. Fichero de festivos</h2>
 <ol start="6" class="example" style="list-style-type: decimal">
 <li><strong>Crearemos una nueva columna para marcar los días festivos con los datos de vacaciones</strong></li>
 </ol>
@@ -312,7 +315,7 @@ headTail(festivos)</code></pre>
 ## 25  2014-01-01                               New Year?s Day</code></pre>
 <hr />
 <ol start="8" class="example" style="list-style-type: decimal">
-<li><strong>Creamos una nueva columna en el dataframe anterior (data) donde se indique que el día es festivo. Indicaremos (con un 1) días festivos y no laborables. También miraremos los días laborables</strong></li>
+<li><strong>Creamos una nueva columna en el dataframe anterior (data) donde se indique que el día es festivo. Indicaremos (con un 1) dÃ­as festivos y no laborables. También miraremos los días laborables</strong></li>
 </ol>
 <pre class="r"><code>data$festivo &lt;- 0
 festivos$value &lt;- 1
@@ -332,21 +335,209 @@ headTail(data)</code></pre>
 ## 24140 2014-02-27 23:30:00    1.22       0
 ## 24141 2014-02-28 00:00:00    1.39       0</code></pre>
 <hr />
+</div>
+<div id="fichero-meteorologico" class="section level2">
+<h2>3. Fichero meteorológico</h2>
 <ol start="9" class="example" style="list-style-type: decimal">
 <li><strong>Ya tenemos indicadas en las fechas los días festivos y laborables. Ahora vamos a hacer lo mismo para los datos meteorológicos</strong></li>
 </ol>
-<pre class="r"><code>data$festivo &lt;- 0
-festivos$value &lt;- 1
-
-data$festivo &lt;- ifelse(!is.na(match(format(data$fecha, format=&quot;%y-%m-%d&quot;), format(festivos$dia, format=&quot;%y-%m-%d&quot;))), 1, 0)
-data$festivo &lt;- ifelse(data$festivo == 0 &amp; isWeekday(data$fecha), 0, 1)</code></pre>
+<pre class="r"><code>meteo = read.csv(&quot;weather_hourly_darksky.csv&quot;, stringsAsFactors = FALSE)
+headTail(meteo)</code></pre>
+<pre><code>##       visibility windBearing temperature                time dewPoint
+## 1           5.97         104       10.24 2011-11-11 00:00:00     8.86
+## 2           4.88          99        9.76 2011-11-11 01:00:00     8.83
+## 3            3.7          98        9.46 2011-11-11 02:00:00     8.79
+## 4           3.12          99        9.23 2011-11-11 03:00:00     8.63
+## ...          ...         ...         ...                &lt;NA&gt;      ...
+## 21162      13.78         249        6.56 2014-02-15 20:00:00     2.76
+## 21163      14.31         248        6.47 2014-02-15 21:00:00     2.71
+## 21164      14.31         248        5.96 2014-02-15 22:00:00     2.69
+## 21165      14.31         246        5.38 2014-02-15 23:00:00      2.6
+##       pressure apparentTemperature windSpeed precipType
+## 1      1016.76               10.24      2.77       rain
+## 2      1016.63                8.24      2.95       rain
+## 3      1016.36                7.76      3.17       rain
+## 4      1016.28                7.44      3.25       rain
+## ...        ...                 ...       ...       &lt;NA&gt;
+## 21162   998.15                3.03      5.61       rain
+## 21163   999.28                3.06      5.25       rain
+## 21164  1000.33                2.68      4.69       rain
+## 21165  1001.25                1.77      5.09       rain
+##                      icon humidity       summary
+## 1     partly-cloudy-night     0.91 Partly Cloudy
+## 2     partly-cloudy-night     0.94 Partly Cloudy
+## 3     partly-cloudy-night     0.96 Partly Cloudy
+## 4                     fog     0.96         Foggy
+## ...                  &lt;NA&gt;      ...          &lt;NA&gt;
+## 21162         clear-night     0.77         Clear
+## 21163         clear-night     0.77         Clear
+## 21164         clear-night      0.8         Clear
+## 21165         clear-night     0.82         Clear</code></pre>
 <hr />
 <ol start="10" class="example" style="list-style-type: decimal">
+<li><strong>Igual que con el anterior fichero, pasamos la fecha de character a Date y los textos a numÃ©ricos. Descartaremos los textos</strong></li>
+</ol>
+<pre class="r"><code>meteo$time &lt;- as.POSIXlt(meteo$time, format = '%Y-%m-%d %H:%M:%S')
+meteo$visibility &lt;- as.double(meteo$visibility)
+meteo$windBearing &lt;- as.double(meteo$windBearing)
+meteo$temperature &lt;- as.double(meteo$temperature)
+meteo$dewPoint &lt;- as.double(meteo$dewPoint)
+meteo$pressure &lt;- as.double(meteo$pressure)
+meteo$apparentTemperature &lt;- as.double(meteo$apparentTemperature)
+meteo$windSpeed &lt;- as.double(meteo$windSpeed)
+meteo$humidity &lt;- as.double(meteo$humidity)
+
+meteo &lt;- meteo[,-which(sapply(meteo, class) == &quot;character&quot;)]
+
+summary(meteo)</code></pre>
+<pre><code>##    visibility     windBearing     temperature   
+##  Min.   : 0.18   Min.   :  0.0   Min.   :-5.64  
+##  1st Qu.:10.12   1st Qu.:121.0   1st Qu.: 6.47  
+##  Median :12.26   Median :217.0   Median : 9.93  
+##  Mean   :11.17   Mean   :195.7   Mean   :10.47  
+##  3rd Qu.:13.08   3rd Qu.:256.0   3rd Qu.:14.31  
+##  Max.   :16.09   Max.   :359.0   Max.   :32.40  
+##                                                 
+##       time                        dewPoint         pressure     
+##  Min.   :2011-11-01 00:00:00   Min.   :-9.980   Min.   : 975.7  
+##  1st Qu.:2012-06-08 11:15:00   1st Qu.: 2.820   1st Qu.:1007.4  
+##  Median :2013-01-14 21:30:00   Median : 6.570   Median :1014.8  
+##  Mean   :2013-01-14 21:43:34   Mean   : 6.531   Mean   :1014.1  
+##  3rd Qu.:2013-08-23 08:45:00   3rd Qu.:10.330   3rd Qu.:1022.0  
+##  Max.   :2014-03-31 22:00:00   Max.   :19.880   Max.   :1043.3  
+##  NA's   :3                                      NA's   :13      
+##  apparentTemperature   windSpeed         humidity     
+##  Min.   :-8.88       Min.   : 0.040   Min.   :0.2300  
+##  1st Qu.: 3.90       1st Qu.: 2.420   1st Qu.:0.7000  
+##  Median : 9.36       Median : 3.680   Median :0.8100  
+##  Mean   : 9.23       Mean   : 3.905   Mean   :0.7818  
+##  3rd Qu.:14.32       3rd Qu.: 5.070   3rd Qu.:0.8900  
+##  Max.   :32.42       Max.   :14.800   Max.   :1.0000  
+## </code></pre>
+<hr />
+<ol start="11" class="example" style="list-style-type: decimal">
+<li><strong>Rellenaremos los NA con el valor anterior de la serie</strong></li>
+</ol>
+<pre class="r"><code>meteo &lt;- meteo[!is.na(meteo$time),]  # omitir NA en time
+
+for (i in 1:nrow(meteo)) {
+  # NA de pressure, cogemos valor anterior
+  meteo$pressure[i] &lt;- ifelse(is.na(meteo$pressure[i]), meteo$pressure[i-1], meteo$pressure[i])
+}
+
+summary(meteo)</code></pre>
+<pre><code>##    visibility     windBearing     temperature    
+##  Min.   : 0.18   Min.   :  0.0   Min.   :-5.640  
+##  1st Qu.:10.12   1st Qu.:121.0   1st Qu.: 6.470  
+##  Median :12.26   Median :217.0   Median : 9.935  
+##  Mean   :11.17   Mean   :195.7   Mean   :10.472  
+##  3rd Qu.:13.08   3rd Qu.:256.0   3rd Qu.:14.318  
+##  Max.   :16.09   Max.   :359.0   Max.   :32.400  
+##       time                        dewPoint         pressure     
+##  Min.   :2011-11-01 00:00:00   Min.   :-9.980   Min.   : 975.7  
+##  1st Qu.:2012-06-08 11:15:00   1st Qu.: 2.820   1st Qu.:1007.4  
+##  Median :2013-01-14 21:30:00   Median : 6.575   Median :1014.8  
+##  Mean   :2013-01-14 21:43:34   Mean   : 6.531   Mean   :1014.1  
+##  3rd Qu.:2013-08-23 08:45:00   3rd Qu.:10.330   3rd Qu.:1022.0  
+##  Max.   :2014-03-31 22:00:00   Max.   :19.880   Max.   :1043.3  
+##  apparentTemperature   windSpeed         humidity     
+##  Min.   :-8.880      Min.   : 0.040   Min.   :0.2300  
+##  1st Qu.: 3.900      1st Qu.: 2.420   1st Qu.:0.7000  
+##  Median : 9.365      Median : 3.680   Median :0.8100  
+##  Mean   : 9.231      Mean   : 3.906   Mean   :0.7818  
+##  3rd Qu.:14.320      3rd Qu.: 5.070   3rd Qu.:0.8900  
+##  Max.   :32.420      Max.   :14.800   Max.   :1.0000</code></pre>
+<hr />
+<ol start="12" class="example" style="list-style-type: decimal">
+<li><strong>Los datos meteorológicos van de hora en hora y los de consumo de 30min a 30min. Duplicaremos las filas sumando 30 minutos a las nuevas.</strong></li>
+</ol>
+<pre class="r"><code>for (i in 1:nrow(meteo)) {
+  # copiamos fila
+  duplicate_row &lt;- meteo[i,]
+
+  # sumar 30 minutos
+  newDate &lt;- as.POSIXlt(duplicate_row$time)
+  newDate$min &lt;- newDate$min + 30
+  duplicate_row$time &lt;- as.POSIXlt(newDate)
+  
+  # añadimos al dataset de meteo
+  meteo &lt;- rbind(meteo, duplicate_row)
+}
+
+meteo &lt;- meteo[rev(order(as.Date(meteo$time))),]
+headTail(meteo)</code></pre>
+<pre><code>##        visibility windBearing temperature                time dewPoint
+## 202771      13.13         110       12.51 2014-03-31 22:30:00     7.97
+## 202761      12.96         135       13.03 2014-03-31 21:30:00     7.96
+## 202751      14.07         141       13.62 2014-03-31 20:30:00     7.91
+## 202741      14.15         130       14.62 2014-03-31 19:30:00     7.68
+## ...           ...         ...         ...                &lt;NA&gt;      ...
+## 316         12.99         170       14.13 2011-11-01 03:00:00    12.24
+## 315         12.94         161       13.65 2011-11-01 02:00:00    12.14
+## 314         13.26         154       12.73 2011-11-01 01:00:00    11.58
+## 313         13.63         160       13.49 2011-11-01 00:00:00    11.48
+##        pressure apparentTemperature windSpeed humidity
+## 202771  1011.83               12.51      0.94     0.74
+## 202761  1011.97               13.03      1.11     0.71
+## 202751  1011.98               13.62      1.14     0.68
+## 202741  1011.83               14.62      1.58     0.63
+## ...         ...                 ...       ...      ...
+## 316      1006.5               14.13      3.95     0.88
+## 315     1007.09               13.65      3.71     0.91
+## 314     1007.88               12.73      3.08     0.93
+## 313     1008.14               13.49      3.11     0.88</code></pre>
+<hr />
+<ol start="13" class="example" style="list-style-type: decimal">
+<li><strong>Cruzamos los datos meteorlógicos con el dataset a partir de los campos de fecha</strong></li>
+</ol>
+<pre class="r"><code>data &lt;- merge(data, meteo, by.x=&quot;fecha&quot;, by.y=&quot;time&quot;, sort = FALSE)
+headTail(data)</code></pre>
+<pre><code>##                     fecha consumo festivo visibility windBearing
+## 1     2012-10-12 00:30:00       0       0      11.76         234
+## 2     2012-10-12 01:00:00       0       0       13.5         250
+## 3     2012-10-12 01:30:00       0       0       13.5         250
+## 4     2012-10-12 02:00:00       0       0       13.5         252
+## ...                  &lt;NA&gt;     ...     ...        ...         ...
+## 24131 2014-02-27 22:30:00    1.35       0         14         216
+## 24132 2014-02-27 23:00:00    1.25       0      14.03         200
+## 24133 2014-02-27 23:30:00    1.22       0      14.03         200
+## 24134 2014-02-28 00:00:00    1.39       0      12.63         190
+##       temperature dewPoint pressure apparentTemperature windSpeed humidity
+## 1           13.61    12.21   999.47               13.61       5.4     0.91
+## 2           13.09    11.37   1000.1               13.09      6.77     0.89
+## 3           13.09    11.37   1000.1               13.09      6.77     0.89
+## 4           12.54    10.27  1000.51               12.54      6.46     0.86
+## ...           ...      ...      ...                 ...       ...      ...
+## 24131         4.1     1.64  1005.67                1.41      3.02     0.84
+## 24132        3.93     1.61  1004.62                1.42      2.75     0.85
+## 24133        3.93     1.61  1004.62                1.42      2.75     0.85
+## 24134        3.81     1.53  1003.57                1.47      2.53     0.85</code></pre>
+<hr />
+<ol start="14" class="example" style="list-style-type: decimal">
 <li><strong>Finalmente, guardamos el fichero resultante corregido.</strong></li>
 </ol>
-<pre class="r"><code>col_order &lt;- c(&quot;fecha&quot;, &quot;festivo&quot;, &quot;consumo&quot;)
-data &lt;- data[, col_order]
-write.csv(data, file = &quot;dataset.csv&quot;, row.names=FALSE)</code></pre>
+<pre class="r"><code>headTail(data)</code></pre>
+<pre><code>##                     fecha consumo festivo visibility windBearing
+## 1     2012-10-12 00:30:00       0       0      11.76         234
+## 2     2012-10-12 01:00:00       0       0       13.5         250
+## 3     2012-10-12 01:30:00       0       0       13.5         250
+## 4     2012-10-12 02:00:00       0       0       13.5         252
+## ...                  &lt;NA&gt;     ...     ...        ...         ...
+## 24131 2014-02-27 22:30:00    1.35       0         14         216
+## 24132 2014-02-27 23:00:00    1.25       0      14.03         200
+## 24133 2014-02-27 23:30:00    1.22       0      14.03         200
+## 24134 2014-02-28 00:00:00    1.39       0      12.63         190
+##       temperature dewPoint pressure apparentTemperature windSpeed humidity
+## 1           13.61    12.21   999.47               13.61       5.4     0.91
+## 2           13.09    11.37   1000.1               13.09      6.77     0.89
+## 3           13.09    11.37   1000.1               13.09      6.77     0.89
+## 4           12.54    10.27  1000.51               12.54      6.46     0.86
+## ...           ...      ...      ...                 ...       ...      ...
+## 24131         4.1     1.64  1005.67                1.41      3.02     0.84
+## 24132        3.93     1.61  1004.62                1.42      2.75     0.85
+## 24133        3.93     1.61  1004.62                1.42      2.75     0.85
+## 24134        3.81     1.53  1003.57                1.47      2.53     0.85</code></pre>
+<pre class="r"><code>write.csv(data, file = &quot;dataset.csv&quot;, row.names=FALSE)</code></pre>
 </div>
 </div>
 
