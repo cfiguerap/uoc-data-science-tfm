@@ -11,10 +11,13 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r load_libraries, include=FALSE}
-library(lubridate) # for add minutes to a Date
+library(lubridate)
 library(psych)
 library(stringr)
 library(timeDate)
+library(ggplot2)
+library(corrplot)
+library(ggcorrplot)
 ```
 
 ***
@@ -31,9 +34,9 @@ El objectivo es preparar el fichero para su posterior análisis.
 
 
 ```{r}
-data = read.csv("block_0.csv", stringsAsFactors = FALSE)
+data = read.csv("./initial_dataset/block_0.csv", stringsAsFactors = FALSE)
 for (i in 1:9) {
-  next_block = read.csv(paste(c("block_", i, ".csv"), collapse=''), stringsAsFactors = FALSE)
+  next_block = read.csv(paste(c("./initial_dataset/block_", i, ".csv"), collapse=''), stringsAsFactors = FALSE)
   data <- rbind(data, next_block)
 }
 summary(data)
@@ -60,6 +63,7 @@ names(data)[names(data) == "energy.kWh.hh."] <- "consumo"
 ```{r}
 data$id <- NULL
 data$consumo <- suppressWarnings(as.double(data$consumo))
+data <- data[!is.na(data$consumo),]  # omitir NA
 data <- aggregate(data["consumo"], by=list(data$fecha), mean)
 headTail(data)
 ```
@@ -111,7 +115,7 @@ data <- data[!is.na(data$consumo),]  # omitir NA
 (@) __Crearemos una nueva columna para marcar los días festivos con los datos de vacaciones__
 
 ```{r}
-festivos = read.csv("uk_bank_holidays.csv", stringsAsFactors = FALSE)
+festivos = read.csv("./initial_dataset/uk_bank_holidays.csv", stringsAsFactors = FALSE)
 headTail(festivos)
 ```
 ***
@@ -146,7 +150,7 @@ headTail(data)
 (@) __Ya tenemos indicadas en las fechas los días festivos y laborables. Ahora vamos a hacer lo mismo para los datos meteorológicos__
 
 ```{r}
-meteo = read.csv("weather_hourly_darksky.csv", stringsAsFactors = FALSE)
+meteo = read.csv("./initial_dataset/weather_hourly_darksky.csv", stringsAsFactors = FALSE)
 headTail(meteo)
 ```
 ***
@@ -220,5 +224,59 @@ headTail(data)
 (@) __Finalmente, guardamos el fichero resultante corregido.__
 
 ```{r}
-write.csv(data, file = "dataset.csv", row.names=FALSE)
+write.csv(data, file = "./final_dataset/dataset.csv", row.names=FALSE)
+```
+
+***
+
+(@) __AHora que ya tenemos el dataset, vamos a ver la serie temporal__
+
+* Consumo medio diario (kWh/hh / day)
+
+```{r}
+consumo_medio_dia <- aggregate(data["consumo"], by=list(yday(data$fecha)), mean)
+
+p = ggplot() + 
+  geom_line(data = consumo_medio_dia, aes(x=consumo_medio_dia[,1]+as.Date("2013-01-01"), y=consumo_medio_dia$consumo), color='blue') +
+  xlab('Fecha') +
+  ylab('Consumo (kWh/hh)')
+print(p)
+
+boxplot(consumo_medio_dia$consumo)
+
+```
+
+* Consumo medio diario y temperatura (kWh/hh / day & Temp)
+
+```{r}
+consumo_medio_dia <- aggregate(data["consumo"], by=list(yday(data$fecha)), mean)
+temp_media_dia <- aggregate(data["temperature"], by=list(yday(data$fecha)), mean)
+
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+p = ggplot() + 
+  geom_line(data = consumo_medio_dia, aes(x=consumo_medio_dia[,1]+as.Date("2013-01-01"), y=normalize(consumo_medio_dia$consumo)), color='blue') +
+  geom_line(data = consumo_medio_dia, aes(x=temp_media_dia[,1]+as.Date("2013-01-01"), y=normalize(temp_media_dia$temperature)), color='red') +
+  xlab('Fecha') +
+  ylab('Consumo (kWh/hh) y Temp (C?)')
+print(p)
+
+boxplot(temp_media_dia$temperature)
+
+plot(data$consumo, data$temperature)
+abline(lm(data$consumo ~data$temperature))
+
+plot(data$festivo, data$consumo)
+abline(lm(data$festivo ~ data$consumo))
+```
+
+* Correlación entre las variables
+
+```{r}
+data_with_no_dates <- data[,2:length(data)]
+correlation_matrix <- round(cor(data_with_no_dates), 1)
+correlation_matrix
+ggcorrplot(correlation_matrix, hc.order = TRUE, type = "lower")
 ```
