@@ -1,0 +1,224 @@
+---
+title: "Preproceso de datos - TFM"
+author: "Carles Figuera (cfiguerap)"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+library(lubridate) # for add minutes to a Date
+library(psych)
+library(stringr)
+library(timeDate)
+```
+
+***
+
+# Preproceso de datos
+
+El objectivo es preparar el fichero para su posterior análisis.
+
+## 1. Fichero de consumos
+
+***
+
+(@) __Cargamos el fichero y se hace una breve descripción del contenido.__
+
+
+```{r}
+data = read.csv("block_0.csv", stringsAsFactors = FALSE)
+for (i in 1:9) {
+  next_block = read.csv(paste(c("block_", i, ".csv"), collapse=''), stringsAsFactors = FALSE)
+  data <- rbind(data, next_block)
+}
+summary(data)
+```
+
++ Hay `r nrow(data)` registros.
++ Hay `r ncol(data)` variables.
++ Las variables son: `r colnames(data)`.
+
+***
+
+(@) __Renombramos columnas para facilitar el trabajo__
+
+```{r}
+names(data)[names(data) == "LCLid"] <- "id"
+names(data)[names(data) == "tstp"] <- "fecha"
+names(data)[names(data) == "energy.kWh.hh."] <- "consumo"
+```
+
+***
+
+(@) __Nos quedaremos con la media de todas las lecturas agrupando por su fecha.__
+
+```{r}
+data$id <- NULL
+data$consumo <- suppressWarnings(as.double(data$consumo))
+data <- aggregate(data["consumo"], by=list(data$fecha), mean)
+headTail(data)
+```
+
+*** 
+
+(@) __Verificar el tipo de variable.__
+
+```{r}
+sapply(data, class)
+```
+
+Podemos ver que los datos de fecha deberían ser Date.
+
+```{r}
+names(data)[names(data) == "Group.1"] <- "fecha"
+data$fecha <- as.POSIXlt(data$fecha, format = '%Y-%m-%d %H:%M:%S.0000000')
+headTail(data)
+```
+
+***
+
+(@) __Comprobamos que no tenemos valores perdidos en los datos__
+
+```{r}
+colSums(is.na(data))
+```
+
+Existen valores nulos, así que haremos lo siguiente:
+
+* Las fechas, pondremos el valor anterior sumando 30 minutos
+* Los consumos, omitiremos el valor
+
+```{r}
+idx <- which(is.na(data$fecha))
+for (i in which(is.na(data$fecha))) {
+  newDate <- as.POSIXlt(data$fecha[i-1])
+  newDate$min <- newDate$min + 30
+  data$fecha[i] <- as.POSIXlt(newDate)
+}
+
+data <- data[!is.na(data$consumo),]  # omitir NA
+```
+
+***
+
+## 2. Fichero de festivos
+
+(@) __Crearemos una nueva columna para marcar los días festivos con los datos de vacaciones__
+
+```{r}
+festivos = read.csv("uk_bank_holidays.csv", stringsAsFactors = FALSE)
+headTail(festivos)
+```
+***
+
+(@) __Igual que con el anterior fichero, pasamos la fecha de vacaciones de character a Date__
+
+```{r}
+names(festivos)[names(festivos) == "Bank.holidays"] <- "dia"
+festivos$dia <- as.POSIXlt(festivos$dia, format = '%Y-%m-%d')
+headTail(festivos)
+```
+
+***
+
+(@) __Creamos una nueva columna en el dataframe anterior (data) donde se indique que el día es festivo. Indicaremos (con un 1) días festivos y no laborables. También miraremos los días laborables__
+
+```{r}
+data$festivo <- 0
+festivos$value <- 1
+
+data$festivo <- ifelse(!is.na(match(format(data$fecha, format="%y-%m-%d"), format(festivos$dia, format="%y-%m-%d"))), 1, 0)
+data$festivo <- ifelse(data$festivo == 0 & isWeekday(data$fecha), 0, 1)
+
+headTail(data)
+```
+
+***
+
+## 3. Fichero meteorológico
+
+
+(@) __Ya tenemos indicadas en las fechas los días festivos y laborables. Ahora vamos a hacer lo mismo para los datos meteorológicos__
+
+```{r}
+meteo = read.csv("weather_hourly_darksky.csv", stringsAsFactors = FALSE)
+headTail(meteo)
+```
+***
+
+(@) __Igual que con el anterior fichero, pasamos la fecha de character a Date y los textos a numéricos. Descartaremos los textos__
+
+```{r}
+meteo$time <- as.POSIXlt(meteo$time, format = '%Y-%m-%d %H:%M:%S')
+meteo$visibility <- suppressWarnings(as.double(meteo$visibility))
+meteo$windBearing <- suppressWarnings(as.double(meteo$windBearing))
+meteo$temperature <- suppressWarnings(as.double(meteo$temperature))
+meteo$dewPoint <- suppressWarnings(as.double(meteo$dewPoint))
+meteo$pressure <- suppressWarnings(as.double(meteo$pressure))
+meteo$apparentTemperature <- suppressWarnings(as.double(meteo$apparentTemperature))
+meteo$windSpeed <- suppressWarnings(as.double(meteo$windSpeed))
+meteo$humidity <- suppressWarnings(as.double(meteo$humidity))
+
+meteo <- meteo[,-which(sapply(meteo, class) == "character")]
+
+summary(meteo)
+```
+
+***
+
+(@) __Rellenaremos los NA con el valor anterior de la serie__
+
+```{r}
+meteo <- meteo[!is.na(meteo$time),]  # omitir NA en time
+
+for (i in 1:nrow(meteo)) {
+  # NA de pressure, cogemos valor anterior
+  meteo$pressure[i] <- ifelse(is.na(meteo$pressure[i]), meteo$pressure[i-1], meteo$pressure[i])
+}
+
+summary(meteo)
+```
+
+***
+
+(@) __Los datos meteorológicos van de hora en hora y los de consumo de 30 min a 30 min. Duplicaremos las filas sumando 30 minutos a las nuevas.__
+
+```{r}
+for (i in 1:nrow(meteo)) {
+  # copiamos fila
+  duplicate_row <- meteo[i,]
+
+  # sumar 30 minutos
+  newDate <- as.POSIXlt(duplicate_row$time)
+  newDate$min <- newDate$min + 30
+  duplicate_row$time <- as.POSIXlt(newDate)
+  
+  # añadimos al dataset de meteo
+  meteo <- rbind(meteo, duplicate_row)
+}
+
+meteo <- meteo[rev(order(as.Date(meteo$time))),]
+headTail(meteo)
+```
+
+***
+
+(@) __Cruzamos los datos meteorlógicos con el dataset a partir de los campos de fecha__
+
+```{r}
+data <- merge(data, meteo, by.x="fecha", by.y="time", sort = FALSE)
+headTail(data)
+```
+
+***
+
+(@) __Finalmente, guardamos el fichero resultante corregido.__
+
+```{r}
+write.csv(data, file = "dataset.csv", row.names=FALSE)
+```
