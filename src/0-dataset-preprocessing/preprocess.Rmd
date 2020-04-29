@@ -190,17 +190,28 @@ summary(meteo)
 
 ***
 
-(@) __Los datos meteorológicos van de hora en hora y los de consumo de 30 min a 30 min. Duplicaremos las filas sumando 30 minutos a las nuevas.__
+(@) __Los datos meteorológicos van de hora en hora y los de consumo de 30 min a 30 min. Duplicaremos las filas con la media sumando 30 minutos a las nuevas.__
 
 ```{r}
-for (i in 1:nrow(meteo)) {
+for (i in 1:nrow(meteo)-1) {
   # copiamos fila
   duplicate_row <- meteo[i,]
+  next_row <- meteo[i+1,]
 
   # sumar 30 minutos
   newDate <- as.POSIXlt(duplicate_row$time)
   newDate$min <- newDate$min + 30
   duplicate_row$time <- as.POSIXlt(newDate)
+  
+  # medias
+  duplicate_row$visibility <- ((duplicate_row$visibility + next_row$visibility) / 2)
+  duplicate_row$windBearing <- ((duplicate_row$windBearing + next_row$windBearing) / 2)
+  duplicate_row$temperature <- ((duplicate_row$temperature + next_row$temperature) / 2)
+  duplicate_row$dewPoint <- ((duplicate_row$dewPoint + next_row$dewPoint) / 2)
+  duplicate_row$pressure <- ((duplicate_row$pressure + next_row$pressure) / 2)
+  duplicate_row$apparentTemperature <- ((duplicate_row$apparentTemperature + next_row$apparentTemperature) / 2)
+  duplicate_row$windSpeed <- ((duplicate_row$windSpeed + next_row$windSpeed) / 2)
+  duplicate_row$humidity <- ((duplicate_row$humidity + next_row$humidity) / 2)
   
   # añadimos al dataset de meteo
   meteo <- rbind(meteo, duplicate_row)
