@@ -1,0 +1,113 @@
+---
+title: "Análisis de datos - TFM"
+author: "Carles Figuera (cfiguerap)"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+library(lubridate)
+library(psych)
+library(stringr)
+library(timeDate)
+library(ggplot2)
+library(corrplot)
+library(ggcorrplot)
+```
+
+***
+
+# Preproceso de datos
+
+El objectivo es realizar un análisis de los datos.
+
+## 1. Fichero de datos
+
+***
+
+(@) __Cargamos el fichero y se hace una breve descripción del contenido.__
+
+
+```{r}
+data = read.csv("./final_dataset/dataset.csv", stringsAsFactors = FALSE)
+summary(data)
+```
+
++ Hay `r nrow(data)` registros.
++ Hay `r ncol(data)` variables.
++ Las variables son: `r colnames(data)`.
+
+***
+
+(@) __Comprobamos que no tenemos valores perdidos en los datos__
+
+```{r}
+colSums(is.na(data))
+```
+
+***
+
+(@) __Ahora que ya tenemos el dataset, vamos a ver la serie temporal__
+
+* Consumo diario (kWh/hh / day)
+
+```{r}
+boxplot(data$consumo)
+hist(data$consumo)
+plot(data$consumo)
+```
+
+* Consumo medio diario (kWh/hh / day)
+
+```{r}
+consumo_medio_dia <- aggregate(data["consumo"], by=list(yday(data$fecha)), mean)
+
+p = ggplot() + 
+  geom_line(data = consumo_medio_dia, aes(x=consumo_medio_dia[,1], y=consumo_medio_dia$consumo), color='blue') +
+  xlab('Fecha') +
+  ylab('Consumo (kWh/hh)')
+print(p)
+
+boxplot(consumo_medio_dia$consumo)
+hist(consumo_medio_dia$consumo)
+
+```
+
+* Consumo medio diario y temperatura (kWh/hh / day & Temp)
+
+```{r}
+consumo_medio_dia <- aggregate(data["consumo"], by=list(yday(data$fecha)), mean)
+temp_media_dia <- aggregate(data["temperature"], by=list(yday(data$fecha)), mean)
+
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+p = ggplot() + 
+  geom_line(data = consumo_medio_dia, aes(x=consumo_medio_dia[,1], y=normalize(consumo_medio_dia$consumo)), color='blue') +
+  geom_line(data = consumo_medio_dia, aes(x=temp_media_dia[,1], y=normalize(temp_media_dia$temperature)), color='red') +
+  xlab('Fecha') +
+  ylab('Consumo (kWh/hh) y Temp (Cº)')
+print(p)
+
+boxplot(temp_media_dia$temperature)
+
+plot(data$consumo, data$temperature)
+abline(lm(data$consumo~data$temperature))
+
+plot(data$festivo, data$consumo)
+abline(lm(data$festivo ~ data$consumo))
+```
+
+* Correlación entre las variables
+
+```{r}
+data_with_no_dates <- data[,2:length(data)]
+correlation_matrix <- round(cor(data_with_no_dates), 1)
+ggcorrplot(correlation_matrix, hc.order = TRUE, type = "lower")
+```
